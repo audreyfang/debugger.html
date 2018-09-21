@@ -17,7 +17,7 @@ debugger.html is a hackable debugger for modern times, built from the ground up 
 * [Getting Involved](#getting-involved)
 * [Documentation](#documentation)
 * [Discussion](#discussion)
-* [License](#license)
+* [License](#license)rewrewr
 
 ### Quick Setup
 
