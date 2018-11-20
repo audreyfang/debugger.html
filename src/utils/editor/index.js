@@ -194,6 +194,13 @@ export function markText(_editor: any, className, { start, end }: EditorRange) {
   );
 }
 
+export function addWidget(_editor: any, htmlNode: any, position: any) {
+  return _editor.codeMirror.setBookmark(position, {
+    widget: htmlNode,
+    insertLeft: true
+  });
+}
+
 export function lineAtHeight(_editor, sourceId, event) {
   const _editorLine = _editor.codeMirror.lineAtHeight(event.clientY);
   return toSourceLine(sourceId, _editorLine);

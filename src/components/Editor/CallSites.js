@@ -5,15 +5,7 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 
-import {
-  range,
-  keyBy,
-  isEqualWith,
-  uniqBy,
-  groupBy,
-  flatten,
-  debounce
-} from "lodash";
+import { range, keyBy, uniqBy, groupBy, flatten, debounce } from "lodash";
 
 import CallSite from "./CallSite";
 
@@ -24,21 +16,9 @@ import {
   getBreakpointsForSource
 } from "../../selectors";
 
-import { getTokenLocation, getLocationsInViewport } from "../../utils/editor";
-import { isWasm } from "../../utils/wasm";
+import { getLocationsInViewport } from "../../utils/editor";
 
 import actions from "../../actions";
-
-function getCallSiteAtLocation(callSites, location) {
-  return callSites.find(callSite =>
-    isEqualWith(callSite.location, location, (cloc, loc) => {
-      return (
-        loc.line === cloc.start.line &&
-        (loc.column >= cloc.start.column && loc.column <= cloc.end.column)
-      );
-    })
-  );
-}
 
 class CallSites extends Component {
   props: {
@@ -60,17 +40,13 @@ class CallSites extends Component {
 
   componentDidMount() {
     const { editor } = this.props;
-    const codeMirrorWrapper = editor.codeMirror.getWrapperElement();
 
-    codeMirrorWrapper.addEventListener("click", e => this.onTokenClick(e));
     editor.codeMirror.on("scroll", this.onEditorScroll);
   }
 
   componentWillUnmount() {
     const { editor } = this.props;
-    const codeMirrorWrapper = editor.codeMirror.getWrapperElement();
 
-    codeMirrorWrapper.removeEventListener("click", e => this.onTokenClick(e));
     editor.codeMirror.off("scroll", this.onEditorScroll);
   }
 
@@ -83,64 +59,6 @@ class CallSites extends Component {
   onEditorScroll = debounce(e => {
     this.setState(getLocationsInViewport(this.props.editor));
   }, 200);
-
-  onTokenClick(e) {
-    const { target } = e;
-    const { editor, selectedLocation } = this.props;
-
-    if (
-      !target.classList.contains("call-site") &&
-      !target.classList.contains("call-site-bp")
-    ) {
-      return;
-    }
-
-    const { sourceId } = selectedLocation;
-    const { line, column } = getTokenLocation(editor.codeMirror, target);
-
-    this.toggleBreakpoint(line, isWasm(sourceId) ? undefined : column);
-  }
-
-  toggleBreakpoint(line, column = undefined) {
-    const {
-      selectedSource,
-      selectedLocation,
-      addBreakpoint,
-      removeBreakpoint,
-      callSites
-    } = this.props;
-
-    const callSite = getCallSiteAtLocation(callSites, { line, column });
-
-    if (!callSite) {
-      return;
-    }
-
-    const bp = callSite.breakpoint;
-
-    if ((bp && bp.loading) || !selectedLocation || !selectedSource) {
-      return;
-    }
-
-    const { sourceId } = selectedLocation;
-
-    if (bp) {
-      // NOTE: it's possible the breakpoint has slid to a column
-      column = column || bp.location.column;
-      removeBreakpoint({
-        sourceId: sourceId,
-        line: line,
-        column
-      });
-    } else {
-      addBreakpoint({
-        sourceId: sourceId,
-        sourceUrl: selectedSource.url,
-        line: line,
-        column: column
-      });
-    }
-  }
 
   filterCallSitesByViewport(callSites) {
     return callSites.filter(({ location }) => {
@@ -186,7 +104,15 @@ class CallSites extends Component {
   }
 
   render() {
-    const { editor, callSites, selectedSource, breakpoints } = this.props;
+    const {
+      editor,
+      callSites,
+      selectedSource,
+      selectedLocation,
+      addBreakpoint,
+      removeBreakpoint,
+      breakpoints
+    } = this.props;
 
     if (!callSites || breakpoints.length === 0) {
       return null;
@@ -215,7 +141,12 @@ class CallSites extends Component {
           editor,
           source: selectedSource,
           breakpoint: callSite.breakpoint,
-          showCallSite: true
+          showCallSite: true,
+          selectedLocation: selectedLocation,
+          addBreakpoint: addBreakpoint,
+          removeBreakpoint: removeBreakpoint,
+          selectedSource: selectedSource,
+          callSites: callSites
         };
         return <CallSite {...props} />;
       });
